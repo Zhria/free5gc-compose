@@ -32,14 +32,20 @@ configuration:
   nasTcpPort: 20000 # TCP port which the NAS listens on
 
   # --- Nwu Interfaces ---
-  ikeBindAddress: 10.100.200.15 # Nwu interface  IP address (IKE) on this N3IWF
+  ikeBindAddress: 192.168.10.254 #192.168.10.1 #10.100.200.15 # Nwu interface  IP address (IKE) on this N3IWF
   ipSecTunnelAddress: 10.0.0.1 # Tunnel IP address of XFRM interface on this N3IWF
   ueIpAddressRange: 10.0.0.0/24 # IP address pool allocated to UE in IPSec tunnel
   xfrmInterfaceName: xfrmi # Prefix of XFRM interface name created by N3IWF
   xfrmInterfaceID: 1 # XFRM interface if_id for IPSec routing (Any value except to 0, default value is 7 if not defined)
+  xfrmMTU: 1380 # MTU of XFRM interface
 
   # --- N3 Interfaces ---
   n3iwfGtpBindAddress: 10.100.200.15 # IP address of N3 interface (GTP) on this N3IWF
+
+  # --- Wi-Fi Access ---
+  wifi:
+    ssid: mudproject # SSID of the Wi-Fi access point
+    password: MMWEdge3987#! # Passphrase/PSK for Wi-Fi access
 
   fqdn: n3iwf.free5gc.org # FQDN of this N3IWF
 
@@ -54,17 +60,12 @@ configuration:
     transFreq: 60s # frequency of transmission
     maxRetryTimes: 4 # the max number of DPD response of UE
 
-  # Metrics configuration
-  # If using the same bindingIPv4 as the sbi server, make sure that the ports are different
-  metrics:
-    enable: false # (Optional, default false)
-    scheme: http # (Required) the protocol for metrics (http or https, default https)
-    bindingIPv4: n3iwf.free5gc.org # (Required) IP used to bind the metrics endpoint (default 0.0.0.0)
-    port: 9091 # (Optional, default 9091) port used to bind the service
-    tls: # (Optional) the local path of TLS key (Could be the same as the sbi ones)
-      pem: cert/n3iwf.pem # N3IWF TLS Certificate
-      key: cert/n3iwf.key # N3IWF TLS Private key
-    namespace: free5gc # (Optional, default free5gc)
+  # --- Handover ---
+  # Stateful IPSec handover (no rekey): embed IKE/ESP state (including ESP sequence numbers)
+  # inside the NGAP Source->Target transparent container. If enabled, handover fails if the
+  # state cannot be exported/embedded.
+  handoverStateSync:
+    enable: true
 
 logger: # log output setting
   enable: true # true or false

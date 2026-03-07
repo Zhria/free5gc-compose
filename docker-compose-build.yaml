@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   free5gc-upf:
     container_name: upf
@@ -7,7 +5,12 @@ services:
       context: ./nf_upf
       args:
         DEBUG_TOOLS: "false"
-    command: bash -c "./upf-iptables.sh && ./upf -c ./config/upfcfg.yaml"
+    command: bash -c "./upf-iptables.sh && iperf3 -s -D && ./upf -c ./config/upfcfg.yaml"
+    ports:
+      - "2152:2152/udp"
+      - "8805:8805/udp"
+      - "5202:5201"
+      - "5202:5201/udp"
     volumes:
       - ./config/upfcfg.yaml:/free5gc/config/upfcfg.yaml
       - ./config/upf-iptables.sh:/free5gc/upf-iptables.sh
@@ -15,12 +18,14 @@ services:
       - NET_ADMIN
     networks:
       privnet:
+        ipv4_address: 10.100.200.17
         aliases:
+          - upf
           - upf.free5gc.org
 
   db:
     container_name: mongodb
-    image: mongo:4.4
+    image: mongo:3.6.8
     command: mongod --port 27017
     expose:
       - "27017"
@@ -28,6 +33,7 @@ services:
       - dbdata:/data/db
     networks:
       privnet:
+        ipv4_address: 10.100.200.2
         aliases:
           - db
 
@@ -48,6 +54,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.3
         aliases:
           - nrf.free5gc.org
     depends_on:
@@ -55,16 +62,16 @@ services:
 
   free5gc-amf:
     container_name: amf
-    build:
-      context: ./nf_amf
-      args:
-        DEBUG_TOOLS: "false"
+    image: zhria/amfcustom:latest
     command: ./amf -c ./config/amfcfg.yaml
-    expose:
-      - "8000"
+    ports:
+        - "8000:8000" 
+        - "38412:38412/sctp"
     volumes:
       - ./config/amfcfg.yaml:/free5gc/config/amfcfg.yaml
       - ./cert:/free5gc/cert
+    cap_add:
+      - NET_ADMIN
     environment:
       GIN_MODE: release
     networks:
@@ -91,6 +98,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.4
         aliases:
           - ausf.free5gc.org
     depends_on:
@@ -112,6 +120,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.5
         aliases:
           - nssf.free5gc.org
     depends_on:
@@ -133,6 +142,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.6
         aliases:
           - pcf.free5gc.org
     depends_on:
@@ -140,10 +150,7 @@ services:
 
   free5gc-smf:
     container_name: smf
-    build:
-      context: ./nf_smf
-      args:
-        DEBUG_TOOLS: "false"
+    image: zhria/smfcustom:latest
     command: ./smf -c ./config/smfcfg.yaml -u ./config/uerouting.yaml
     expose:
       - "8000"
@@ -155,6 +162,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.7
         aliases:
           - smf.free5gc.org
     depends_on:
@@ -177,6 +185,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.8
         aliases:
           - udm.free5gc.org
     depends_on:
@@ -200,6 +209,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.9
         aliases:
           - udr.free5gc.org
     depends_on:
@@ -224,6 +234,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.10
         aliases:
           - chf.free5gc.org
     depends_on:
@@ -233,23 +244,30 @@ services:
 
   free5gc-n3iwf:
     container_name: n3iwf
-    build:
-      context: ./nf_n3iwf
-      args:
-        DEBUG_TOOLS: "false"
-    command: ./n3iwf -c ./config/n3iwfcfg.yaml
+    image: zhria/n3iwfcustom:latest
+    command: /free5gc/n3iwf/n3iwf -c /free5gc/config/n3iwfcfg.yaml
+    working_dir: /free5gc
     volumes:
       - ./config/n3iwfcfg.yaml:/free5gc/config/n3iwfcfg.yaml
       - ./config/n3iwf-ipsec.sh:/free5gc/n3iwf-ipsec.sh
+      - ./cert/n3iwf.key:/free5gc/cert/n3iwf.key
+      - ./cert/n3iwf.pem:/free5gc/cert/n3iwf.pem
+      - ./n3iwf_e2logger:/free5gc/log/:rw
+      - ./wifi_metrics:/free5gc/wifi_metrics:ro
+
     environment:
       GIN_MODE: release
+      #N3IWF_DISABLE_OFFLOADS: "0" Questo serve per riattivare GRO TSO GSO sulle interfacce in uso.
     cap_add:
       - NET_ADMIN
+
     networks:
       privnet:
         ipv4_address: 10.100.200.15
         aliases:
           - n3iwf.free5gc.org
+      macvlan10:
+        ipv4_address: 192.168.10.254
     depends_on:
       - free5gc-amf
       - free5gc-smf
@@ -291,6 +309,7 @@ services:
       GIN_MODE: release
     networks:
       privnet:
+        ipv4_address: 10.100.200.11
         aliases:
           - nef.free5gc.org
     depends_on:
@@ -312,6 +331,7 @@ services:
       - GIN_MODE=release
     networks:
       privnet:
+        ipv4_address: 10.100.200.12
         aliases:
           - webui
     ports:
@@ -320,44 +340,39 @@ services:
       - db
       - free5gc-nrf
 
-  ueransim:
-    container_name: ueransim
-    build:
-      context: ./ueransim
-    command: ./nr-gnb -c ./config/gnbcfg.yaml
+  free5gc-e2node:
+    container_name: e2node
+    image: zhria/e2node:latest
+    command: ./build/kpm_callbacks -c ./config/e2node.yaml 
+    network_mode: "host"
     volumes:
-      - ./config/gnbcfg.yaml:/ueransim/config/gnbcfg.yaml
-      - ./config/uecfg.yaml:/ueransim/config/uecfg.yaml
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - "/dev/net/tun"
-    networks:
-      privnet:
-        aliases:
-          - gnb.free5gc.org
-    depends_on:
-      - free5gc-amf
-      - free5gc-upf
-
-  n3iwue:
-    container_name: n3iwue
-    build:
-      context: ./n3iwue
-    command: bash -c "ip route del default && ip route add default via 10.100.200.1 dev eth0 metric 203 && sleep infinity"
-    volumes:
-      - ./config/n3uecfg.yaml:/n3iwue/config/n3ue.yaml
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - "/dev/net/tun"
-    networks:
-      privnet:
-        ipv4_address: 10.100.200.203
-        aliases:
-          - n3ue.free5gc.org
+      - ./n3iwf_e2logger:/home/e2sim/log/:rw
+      - ./config/e2node.yaml:/home/e2sim/config/e2node.yaml
     depends_on:
       - free5gc-n3iwf
+      - free5gc-upf
+      - free5gc-amf
+      - free5gc-smf
+
+  wifi-metrics-exporter:
+    image: alpine:3.19
+    container_name: wifi-metrics-exporter
+    network_mode: host 
+    pid: host
+    privileged: true              
+    command: sh -lc 'apk add --no-cache python3 py3-pip iw iproute2 ethtool hostapd && python3 /app/exporter.py'
+    volumes:
+      - ./wifi_metrics/exporter.py:/app/exporter.py:ro
+      - ./wifi_metrics:/wifi-metrics:rw 
+      - /run/hostapd:/run/hostapd:rw
+      - /run/hostapd:/var/run/hostapd:rw   
+      - /tmp:/tmp   
+    environment:
+      HOSTAPD_CTRL_PATH: /var/run/hostapd
+      HOSTAPD_IFACES: "wlp6s0"
+      SCRAPE_INTERVAL: "0.5"
+      OUTPUT_DIR: "/wifi-metrics"
+
 
 networks:
   privnet:
@@ -367,6 +382,8 @@ networks:
         - subnet: 10.100.200.0/24
     driver_opts:
       com.docker.network.bridge.name: br-free5gc
+  macvlan10:
+    external: true
 
 volumes:
   dbdata:
