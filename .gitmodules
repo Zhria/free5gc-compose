@@ -1,0 +1,12 @@
+[submodule "amfCustom"]
+	path = amfCustom
+	url = https://github.com/Zhria/amf.git
+	branch = feat/handover-support
+[submodule "smfCustom"]
+	path = smfCustom
+	url = https://github.com/Zhria/smf.git
+	branch = feat/handover-support
+[submodule "n3iwfCustom"]
+	path = n3iwfCustom
+	url = https://github.com/Zhria/n3iwf
+	branch = feat/handover-dl-forwarding
