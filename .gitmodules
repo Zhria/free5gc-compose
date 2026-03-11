@@ -10,3 +10,7 @@
 	path = n3iwfCustom
 	url = https://github.com/Zhria/n3iwf
 	branch = feat/handover-dl-forwarding
+[submodule "e2sim"]
+	path = e2sim
+	url = https://github.com/Zhria/e2sim.git
+	branch = main
